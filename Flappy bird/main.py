@@ -21,8 +21,8 @@ POWERUP_TYPES = ["gravity", "invincible", "auto"]
 
 POWERUP_DURATION = {
     "gravity": 8 * FPS,      # 8 seconds
-    "invincible": 8 * FPS,  # 12 seconds
-    "auto": 6 * FPS         # 10 seconds
+    "invincible": 8 * FPS,  # 8 seconds
+    "auto": 8 * FPS         # 8 seconds
 }
 
 
@@ -399,7 +399,7 @@ def mainGame():
                 else:
                     p1_effects[effect] = POWERUP_DURATION[effect]
 
-                GAME_SOUNDS['swoosh'].play()
+                GAME_SOUNDS['power'].play()
                 continue  # avoid checking P2 after removal
 
             # PLAYER 2 GETS POWERUP
@@ -414,7 +414,7 @@ def mainGame():
                 else:
                     p2_effects[effect] = POWERUP_DURATION[effect]
 
-                GAME_SOUNDS['swoosh'].play()
+                GAME_SOUNDS['power'].play()
 
 
 
@@ -565,6 +565,7 @@ if __name__ == "__main__":
     GAME_SOUNDS['swoosh'] = pygame.mixer.Sound('audio/swoosh.wav')
     GAME_SOUNDS['wing'] = pygame.mixer.Sound('audio/wing.wav')
     GAME_SOUNDS['eat'] = pygame.mixer.Sound('audio/eat.wav')
+    GAME_SOUNDS['power'] = pygame.mixer.Sound('audio/power.wav')
 
     GAME_SPRITES['Factory'] = pygame.image.load(BACKGROUND).convert()
     GAME_SPRITES['player'] = pygame.image.load(PLAYER).convert_alpha()
