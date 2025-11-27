@@ -1,4 +1,5 @@
 import random # For generating random numbers
+import math # used for animated pipes
 import sys # We will use sys.exit to exit the program
 import pygame
 from pygame.locals import * # Basic pygame imports
@@ -7,6 +8,9 @@ from pygame.locals import * # Basic pygame imports
 FPS = 35
 SCREENWIDTH = 1076
 SCREENHEIGHT = 742
+EVOLUTION_SCORE = 50
+EVOLUTION_FOOD = 15
+
 SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 GROUNDY = SCREENHEIGHT * 0.8
 GAME_SPRITES = {}
@@ -15,9 +19,12 @@ PLAYER = 'img/bird.png'
 BACKGROUND = 'img/BG_real.png'
 PIPE = 'img/pipe.png'
 FOOD = 'img/food.png'
+# game mode at starting 
+game_mode = "normal"  
 
 # power ups config
-POWERUP_TYPES = ["gravity", "invincible", "auto"] 
+NORMAL_POWERUPS = ["gravity", "invincible", "auto"]
+ADVANCED_POWERUPS = ["gravity", "invincible", "auto", "reset"]
 
 POWERUP_DURATION = {
     "gravity": 8 * FPS,      # 8 seconds
@@ -86,7 +93,10 @@ def spawn_powerup(upperPipes, lowerPipes):
     y = random.randint(80, int(GROUNDY - 150))
     x = SCREENWIDTH + 20
 
-    ptype = random.choice(POWERUP_TYPES)
+    if game_mode == "normal":
+        ptype = random.choice(NORMAL_POWERUPS)
+    else:
+        ptype = random.choice(ADVANCED_POWERUPS)
 
     return {"x": x, "y": y, "type": ptype}
 
@@ -137,7 +147,8 @@ def get_next_pipe(player_x, upperPipes, lowerPipes):
 
 
 
-def mainGame():
+def mainGame(): 
+    game_mode = "normal" 
     # Player positions
     p1x = int(SCREENWIDTH/5)
     p1y = int(SCREENWIDTH/2)
@@ -259,6 +270,15 @@ def mainGame():
             if pipeMid <= p2Mid < pipeMid + 4 and p2_alive:
                 score2 += 1
                 GAME_SOUNDS['point'].play()
+
+        # EVOLUTION 
+        if game_mode == "normal":
+            p1_trigger = (score1 >= EVOLUTION_SCORE and food_score1 >= EVOLUTION_FOOD)
+            p2_trigger = (score2 >= EVOLUTION_SCORE and food_score2 >= EVOLUTION_FOOD)
+
+            if p1_trigger or p2_trigger:
+                game_mode = "advanced"
+                print (" EVOLUTION ACTIVATED! ")
 
         #  GRAVITY WRT to og game
         ### PLAYER 1 MOVEMENT & EFFECTS
@@ -394,6 +414,13 @@ def mainGame():
                 effect = pu['type']
                 powerups.remove(pu)
 
+                # RESET POWER-UP (PLAYER 1)
+                if effect == "reset":
+                    game_mode = "normal"
+                    print("RESET → Normal mode!")
+                    GAME_SOUNDS['power'].play()
+                    continue
+
                 if effect == "gravity":
                     p2_effects["gravity"] = POWERUP_DURATION["gravity"]  # Debuff P2
                 else:
@@ -409,6 +436,12 @@ def mainGame():
                 effect = pu['type']
                 powerups.remove(pu)
 
+                if effect == "reset":
+                    game_mode = "normal"
+                    print("RESET → Normal mode!")
+                    GAME_SOUNDS['power'].play()
+                    continue
+
                 if effect == "gravity":
                     p1_effects["gravity"] = POWERUP_DURATION["gravity"]
                 else:
@@ -422,9 +455,27 @@ def mainGame():
         SCREEN.blit(GAME_SPRITES['Factory'], (0, 0))
 
         # Draw pipes
-        for u, l in zip(upperPipes, lowerPipes):
-            SCREEN.blit(GAME_SPRITES['pipe'][0], (u['x'], u['y']))
-            SCREEN.blit(GAME_SPRITES['pipe'][1], (l['x'], l['y']))
+        # --- DRAW OBSTACLES BASED ON MODE ---
+        if game_mode == "normal":
+            for u, l in zip(upperPipes, lowerPipes):
+                SCREEN.blit(GAME_SPRITES['pipe'][0], (u['x'], u['y']))
+                SCREEN.blit(GAME_SPRITES['pipe'][1], (l['x'], l['y']))
+
+        elif game_mode == "advanced":
+            for u, l in zip(upperPipes, lowerPipes):
+
+                # Compute animated positions (do NOT modify original pipe y)
+                offset = math.sin(pygame.time.get_ticks() / 200) * 10
+
+                # Draw spike on animated top pipe
+                spike_y = u['y'] + offset
+                SCREEN.blit(GAME_SPRITES['spike'], (u['x'], spike_y))
+
+                # Draw laser on animated bottom pipe
+                laser_y = l['y'] - offset
+                SCREEN.blit(GAME_SPRITES['laser'], (l['x'], laser_y))
+
+
 
         # Draw food
         for f in foods:
@@ -471,6 +522,27 @@ def isCollide(playerx, playery, upperPipes, lowerPipes):
             GAME_SOUNDS['hit'].play()
             return True
     
+        # --- ADVANCED MODE COLLISION (SPIKE + LASER) 
+    if 'game_mode' in globals() and game_mode == "advanced":
+
+        spike_w = GAME_SPRITES['spike'].get_width()
+        spike_h = GAME_SPRITES['spike'].get_height()
+        laser_w = GAME_SPRITES['laser'].get_width()
+        laser_h = GAME_SPRITES['laser'].get_height()
+
+        # Spike (upper)
+        for u in upperPipes:
+            if (abs(playerx - u['x']) < spike_w - 10 and
+                abs(playery - u['y']) < spike_h - 10):
+                GAME_SOUNDS['hit'].play()
+                return True
+
+        # Laser (lower)
+        for l in lowerPipes:
+            if (abs(playerx - l['x']) < laser_w - 10 and
+                abs(playery - l['y']) < laser_h - 10):
+                GAME_SOUNDS['hit'].play()
+                return True
 
     return False
 
@@ -555,8 +627,12 @@ if __name__ == "__main__":
     GAME_SPRITES['message'] =pygame.image.load('img/message.png').convert_alpha()
     GAME_SPRITES['base'] =pygame.image.load('img/base.png').convert_alpha()
     GAME_SPRITES['pipe'] =(pygame.transform.rotate(pygame.image.load( PIPE).convert_alpha(), 180), 
-    pygame.image.load(PIPE).convert_alpha()
-    )
+    pygame.image.load(PIPE).convert_alpha())
+    GAME_SPRITES['spike'] = (pygame.transform.rotate(pygame.image.load('img/spike.png').convert_alpha(),180))
+    GAME_SPRITES['laser'] = pygame.image.load('img/laser.png').convert_alpha()
+    GAME_SPRITES['power_reset'] = pygame.image.load('img/power_reset.png').convert_alpha()
+
+
 
     # Game sounds
     GAME_SOUNDS['die'] = pygame.mixer.Sound('audio/die.wav')

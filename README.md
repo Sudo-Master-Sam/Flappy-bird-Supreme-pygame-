@@ -24,6 +24,7 @@ then follow gude
 **gravity** - Gives the opponent more gravity 
 **invincible** - Make the player immune to collide with pipes 
 **auto pilot** - Automatically pilots the player to avoid pipes during the active time 
+**Power_reset** - return to original mode
 
   
 

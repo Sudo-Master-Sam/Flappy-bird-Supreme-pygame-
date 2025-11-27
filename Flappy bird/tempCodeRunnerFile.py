@@ -1,1 +1,1 @@
-font
+power_reset.png
